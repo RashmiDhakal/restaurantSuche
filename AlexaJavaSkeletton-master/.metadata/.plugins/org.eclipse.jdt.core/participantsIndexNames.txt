@@ -1,0 +1,5 @@
+INDEX VERSION 1.131
+C:\Users\Olga\Desktop\PP\b\AlexaJavaSkeletton-master\.metadata\.plugins\org.eclipse.jst.jsp.core\jspsearch\107467683.index
+\de.unidue.ltl.alexaSkeletton\src\main\java
+C:\Users\Olga\Desktop\PP\b\AlexaJavaSkeletton-master\.metadata\.plugins\org.eclipse.jst.jsp.core\jspsearch\3363523031.index
+\de.unidue.ltl.alexaSkeletton\src\main\java

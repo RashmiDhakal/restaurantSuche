@@ -1,0 +1,161 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": “XXX”,
+            "intents": [
+                {
+                    "name": “XXX”,
+                    "slots": [
+                        {
+                            "name": "Alles",
+                            "type": "ALLES"
+                        }
+                    ],
+                    "samples": [
+                        "{Alles}"
+                    ]
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NavigateHomeIntent",
+                    "samples": []
+                }
+            ],
+            "types": [
+                {
+                    "name": "ALLES",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "hoodwink ersichtlich kasino ländereien fraktur größten luftschiff puffer"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "furchtlos höllenfeuer schuld konzert tausch schmutzig ziellos zyanid"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "öffentlichkeit emotion bettzeit schreien scanner knall durchfallen karamell"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "protest admiral audio herzschlag ego sex unförmig galionsfigur"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "landschaft flitterwochen galoppierend trichter achse alarm wirklichkeit stier"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "wachs balance diagramm harmonisch rein abzeichen kommando gitter"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "ball mischen umleitung schicksal treiber  wespe rinder ungläubiger"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "abstrakt feucht keramik horn fiasko anhörung parasitär"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "art schlange sperren doppeldecker hände verwüstung ungehorsam"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "endlos adresse kultivieren numerisch furchterregend tagebuch neu"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "hexe zehntel absurd karotte analytiker freiheit kriegszeit"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "philosophie gauner stulpe delphin nachwirkungen zimt flussabwärts"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "wurzel aufregung analysieren diplomatisch rauch tiefgründig motte"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "passagier honigtau schläfrig spirituosen wellenbrecher scherz"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "erblicken disziplin auf wiedersehen verstand mörderisch verbrauch"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "joystick muskel perkussiv prüfer barnburner segeltuch"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "makel rächen wiederholen verwirrt kulturelle"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "oberst fuß vermindert fink behaart"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "affäre unehrlich akut ermächtigung kindisch"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "depression wettbewerb wellenbrecher erdborn"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "unanständig basen export hektisch"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "papagei essen angewendet werden"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "föderation spieler absteige"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "kultivieren hammerkopf"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "fohlen genosse"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

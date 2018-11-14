@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;de.unidue.ltl.alexaSkeletton&apos; to &apos;de.unidue.ltl.alexaRS&apos;" description="Rename resource &apos;de.unidue.ltl.alexaSkeletton&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="/de.unidue.ltl.alexaSkeletton" name="de.unidue.ltl.alexaRS" stamp="1541961323553" updateReferences="true"/>
+</session>
