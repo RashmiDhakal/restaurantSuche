@@ -10,5 +10,4 @@ public class AlexaServlet extends com.amazon.speech.speechlet.servlet.SpeechletS
     public AlexaServlet() {
 	    this.setSpeechlet(new AlexaSkillSpeechlet());
 	}
-	
 }

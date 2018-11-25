@@ -20,8 +20,8 @@ import org.json.simple.parser.ParseException;
 
 public class App {
 	
-    public static ArrayList<String> getData() {
-    	ArrayList<String> res = new ArrayList<String>();
+    public static ArrayList<Restaurant> getData() {
+    	ArrayList<Restaurant> res = new ArrayList<Restaurant>();
     	String key = "Efio1-A9NjP2UHSaA5aGwn3IILFcHD39ISzq201w-pxaaaQ2MBiothsuZzUoVmulDTr0W8TPDhsAkt8qS1UpBURKhKFr-6V-EKuJZvFebQXOXiAEOGbLmNhIt_vWW3Yx";
     	HttpClient client = HttpClientBuilder.create().build();
     	HttpGet get = new HttpGet(getURL(getCoordinate("Gertrudisstrasse 1, Essen")));    
@@ -42,7 +42,7 @@ public class App {
     	return res;
     }
     
- /*   private static void write_file(String text, String name) {
+    private static void write_file(String text, String name) {
 		FileWriter fw = null;
 		try {
 			fw = new FileWriter(name + ".txt");
@@ -60,7 +60,7 @@ public class App {
 			e.printStackTrace();
 		}
 	}
-	*/
+	
 	
 /*	private static String userInput() {
 		Scanner reader = new Scanner(System.in);
@@ -92,14 +92,14 @@ public class App {
 		return URL;
 	}
 	
-	private static ArrayList<String> stringToJSON(String stringToParse) {
+	private static ArrayList<Restaurant> stringToJSON(String stringToParse) {
 		JSONParser parser = new JSONParser(); 
-		String result = "";
-		String answer = "";
-		ArrayList<String> ans = new ArrayList<String>();
+		ArrayList<Restaurant> ans = new ArrayList<Restaurant>();
+		
 		try {
 			JSONObject json = (JSONObject) parser.parse(stringToParse);
 			JSONArray response = (JSONArray) json.get("businesses"); 
+			
 			for (int i = 0; i < response.size(); i++) {
 				JSONObject item = (JSONObject) response.get(i); 
 				double distance = (Double) item.get("distance");
@@ -108,36 +108,29 @@ public class App {
 				String name = (String) item.get("name");
 				JSONObject location = (JSONObject) item.get("location");
 				String address = (String) location.get("address1");
-			
-				result += i+1 + ". Name: " + name + System.getProperty("line.separator") +
-						"Address: " + address + System.getProperty("line.separator") + 
-						"Phone: " + phone + System.getProperty("line.separator") + 
-						"Distance: " + distance + System.getProperty("line.separator") + 
-						"Rating: " + rating + System.getProperty("line.separator");
+				ArrayList<String> aliasList = new ArrayList<String>();
+				ArrayList<String> titleList = new ArrayList<String>();
 				
-				answer = "Das Restaurant heiﬂt " + name + " und befindet sich hier: " + address + ". ";
-				ans.add(answer);		
 				JSONArray categories = (JSONArray) item.get("categories");  
 				for (int j = 0; j < categories.size(); j++) {
 					JSONObject items = (JSONObject) categories.get(j);
 					String alias = (String) items.get("alias");
 					String title = (String) items.get("title");
 					
-					result += "Alias: " + alias +  System.getProperty("line.separator") + 
-							"Title: " + title +  System.getProperty("line.separator");
+					aliasList.add(alias);
+					titleList.add(title);
 				}
+				
 				boolean is_closed = (Boolean) item.get("is_closed");
 				
-				result += "Is closed: " + is_closed + System.getProperty("line.separator") +  System.getProperty("line.separator");
+				Restaurant restaurant = new Restaurant(name, address, phone, distance, rating, aliasList, titleList, is_closed);
+				ans.add(restaurant);
 			}
 			
-			//write_file(result, "Result");
-			//System.out.println("Done");
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
-		System.out.println(answer);
+		
 		return ans;
 	}
-	
 }

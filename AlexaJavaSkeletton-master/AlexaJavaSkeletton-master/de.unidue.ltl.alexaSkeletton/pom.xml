@@ -89,7 +89,7 @@
 				de.tudarmstadt.ukp.dkpro.core.stanfordnlp-gpl
 			</artifactId>
 			<version>1.9.2</version>
-		</dependency>
+		</dependency>	
 	</dependencies>
 
 	<properties>

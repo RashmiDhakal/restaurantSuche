@@ -11,22 +11,33 @@ package com.amazon.customskill;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.amazon.customskill.exceptions.DeviceAddressClientException;
 import com.amazon.speech.json.SpeechletRequestEnvelope;
 import com.amazon.speech.slu.Intent;
+import com.amazon.speech.slu.Slot;
+import com.amazon.speech.speechlet.Context;
 import com.amazon.speech.speechlet.IntentRequest;
 import com.amazon.speech.speechlet.LaunchRequest;
+import com.amazon.speech.speechlet.Permissions;
+import com.amazon.speech.speechlet.Session;
 import com.amazon.speech.speechlet.SessionEndedRequest;
 import com.amazon.speech.speechlet.SessionStartedRequest;
 import com.amazon.speech.speechlet.SpeechletResponse;
 import com.amazon.speech.speechlet.SpeechletV2;
+import com.amazon.speech.speechlet.interfaces.system.SystemInterface;
+import com.amazon.speech.speechlet.interfaces.system.SystemState;
+import com.amazon.speech.ui.AskForPermissionsConsentCard;
 import com.amazon.speech.ui.PlainTextOutputSpeech;
 import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SsmlOutputSpeech;
@@ -37,6 +48,26 @@ import nlp.dkpro.backend.PosTagger;
  * This class is the actual skill. Here you receive the input and have to produce the speech output. 
  */
 public class AlexaSkillSpeechlet implements SpeechletV2 {
+	
+	private static final String ADDRESS_CARD_TITLE = "Ich darf deine Adresse nicht lesen";
+
+    /**
+     * The permissions that this skill relies on for retrieving addresses. If the consent token isn't
+     * available or invalid, we will request the user to grant us the following permission
+     * via a permission card.
+     *
+     * Another Possible value if you only want permissions for the country and postal code is:
+     * read::alexa:device:all:address:country_and_postal_code
+     * Be sure to check your permissions settings for your skill on https://developer.amazon.com/
+     */
+    private static final String ALL_ADDRESS_PERMISSION = "read::alexa:device:all:address";
+
+    private static final String WELCOME_TEXT = "Welcome to the Sample Device Address API Skill! What do you want to ask?";
+    private static final String HELP_TEXT = "You can use this skill by asking something like: whats my address";
+    private static final String UNHANDLED_TEXT = "This is unsupported. Please ask something else.";
+    private static final String ERROR_TEXT = "There was an error with the skill. Please try again.";
+	
+	
 	public static String userRequest;
 
 	static Logger logger = LoggerFactory.getLogger(AlexaSkillSpeechlet.class);
@@ -50,22 +81,126 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 	public SpeechletResponse onLaunch(SpeechletRequestEnvelope<LaunchRequest> requestEnvelope) {
 		return getWelcomeResponse();
 	}
+	
+	private SystemState getSystemState(Context context) {
+        return context.getState(SystemInterface.class, SystemState.class);
+    }
+	
+	/**
+     * Helper method for retrieving an OutputSpeech object when given a string of TTS.
+     * @param speechText the text that should be spoken out to the user.
+     * @return an instance of SpeechOutput.
+     */
+    private PlainTextOutputSpeech getPlainTextOutputSpeech(String speechText) {
+        PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
+        speech.setText(speechText);
+
+        return speech;
+    }
+	
+	/**
+     * Creates a {@code SpeechletResponse} for permission requests.
+     * @return SpeechletResponse spoken and visual response for the given intent
+     */
+    private SpeechletResponse getPermissionsResponse() {
+        String speechText = "Ich bräuchte eine Erlaubnis deine Adressdaten zu benutzen um die nächsten Fressbuden zu finden. "
+        		+ "Würdest du mir diese bitte geben?"
+        		+ "Die entsprechende Anfrage schicke ich dir gleich.";
+
+        // Create the permission card content.
+        // The differences between a permissions card and a simple card is that the
+        // permissions card includes additional indicators for a user to enable permissions if needed.
+        AskForPermissionsConsentCard card = new AskForPermissionsConsentCard();
+        card.setTitle(ADDRESS_CARD_TITLE);
+
+        Set<String> permissions = new HashSet<>();
+        permissions.add(ALL_ADDRESS_PERMISSION);
+        card.setPermissions(permissions);
+
+        PlainTextOutputSpeech speech = getPlainTextOutputSpeech(speechText);
+
+        return SpeechletResponse.newTellResponse(speech, card);
+    }
 
 	@Override
 	public SpeechletResponse onIntent(SpeechletRequestEnvelope<IntentRequest> requestEnvelope) {
 		IntentRequest request = requestEnvelope.getRequest();
+		
+		
 
 		Intent intent = request.getIntent();
+		String response = "";
+		try {
+			Session session = requestEnvelope.getSession();
+			Permissions permissions = session.getUser().getPermissions();
+	        if (permissions == null) {
+	            return getPermissionsResponse();
+	        }
+		SystemState systemState = getSystemState(requestEnvelope.getContext());
+        String apiAccessToken = systemState.getApiAccessToken();
+        String deviceId = systemState.getDevice().getDeviceId();
+        String apiEndpoint = systemState.getApiEndpoint();
+        AlexaDeviceAddressClient alexaDeviceAddressClient = new AlexaDeviceAddressClient(
+                deviceId, apiAccessToken, apiEndpoint);
 
-		userRequest = intent.getSlot("Alles").getValue();
+        
+			Address addressObject = alexaDeviceAddressClient.getFullAddress();
+			System.out.println("ADDRESS RECEIVED: " + addressObject.getCountryCode());
+		} catch (DeviceAddressClientException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
-		logger.info("Received following text: [" + userRequest + "]");
+		Map<String, Slot> slots = intent.getSlots();
+		
+		if (slots.get("restaurant").getValue() != null) { 
+			//if (intent.getSlots().containsKey("restaurant")) { 
+			System.out.println("Restaurant");
+			ArrayList<Restaurant> restaurants = App.getData();
+			for(Restaurant restaurant : restaurants) {
+				if(intent.getSlot("restaurant").getValue().contains(restaurant.getName().toLowerCase())) {
+					response = "In der Nähe gibt es " + restaurant.getName() + ". Die Adresse ist " + restaurant.getAddress();
+					return continueConversation(response);
+				}
+			}
+			
+		} else if (slots.get("gericht").getValue() != null) {
+		//} else if (intent.getSlots().containsKey("gericht")) {
+			System.out.println("Gericht");
+			ArrayList<Restaurant> restaurants = App.getData();
+			System.out.println("Data " + (restaurants == null));
+			System.out.println("Data " + (restaurants.isEmpty()));
+			for(Restaurant restaurant : restaurants) {
+				System.out.println("Title " + (restaurant.getTitle()));
+				System.out.println("Intent " + (intent.getSlot("gericht").getValue()));
+				for (String title : restaurant.getTitle()) {
+					if(intent.getSlot("gericht").getValue().contains(title.toLowerCase())) {
+						response = "In der Nähe gibt es " + restaurant.getName() + ", wo du " + title + " essen kanst.";
+						return continueConversation(response);
+					}
+				}
+				
+			}
+			
+		} else if (slots.get("noidea").getValue() != null) { 	
+			return continueConversation("keine Ahnung");
+		}
+		
+		//return continueConversation("Möchtest du was bestimmtes essen oder ein bestimmtes Restaurant besuchen?");
+		return continueConversation("ok");
+		
+		
+
+		//userRequest = intent.getSlot("Alles").getValue();
+		
+	/*	logger.info("Received following text: [" + userRequest + "]");
 		if (userRequest.contains("ja")) {
 			String s = App.getData().get(1);
 			return response(s);
 		} else {
 			return response("Auf wiederhören!");
 		}
+		*/
 		
 		//return response("Erkannter Text: " + userRequest);
 //        return responseWithFlavour("Erkannte Nomen: " + result, new Random().nextInt(5));
@@ -119,24 +254,40 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 	 * The first question presented to the skill user (entry point)
 	 */
 	private SpeechletResponse getWelcomeResponse() {
-		String s = App.getData().get(0);
+		String s = "Hallo!";
 		SsmlOutputSpeech speech = new SsmlOutputSpeech();
 		speech.setSsml("<speak>" + s + "</speak>");
 
-		return askUserResponse("Hallo! Hier ist ein Restaurant in der Nähe: " + s + "Soll ich weiter vorlesen?");
+		return askUserResponse("Hallo! Hier ist die Essen Expertin! Worauf hast du heute hunger?");
 	}
 
 	/**
 	 * Tell the user something - the Alexa session ends after a 'tell'
 	 */
+	private SpeechletResponse continueConversation(String text) {
+		// Create the plain text output.
+		
+		PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
+		speech.setText(text);
+		
+		PlainTextOutputSpeech speechOut = new PlainTextOutputSpeech();
+		speechOut.setText("hey");
+		
+		Reprompt speech2 = new Reprompt();
+		speech2.setOutputSpeech(speechOut);
+		
+		return SpeechletResponse.newAskResponse(speech, speech2);
+	}
+	
 	private SpeechletResponse response(String text) {
 		// Create the plain text output.
 		
 		PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
 		speech.setText(text);
-
+		
 		return SpeechletResponse.newTellResponse(speech);
 	}
+
 
 	/**
 	 * A response to the original input - the session stays alive after an ask
