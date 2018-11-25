@@ -69,6 +69,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 	
 	
 	public static String userRequest;
+	public String address;
 
 	static Logger logger = LoggerFactory.getLogger(AlexaSkillSpeechlet.class);
 
@@ -126,8 +127,6 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 	public SpeechletResponse onIntent(SpeechletRequestEnvelope<IntentRequest> requestEnvelope) {
 		IntentRequest request = requestEnvelope.getRequest();
 		
-		
-
 		Intent intent = request.getIntent();
 		String response = "";
 		try {
@@ -145,7 +144,8 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 
         
 			Address addressObject = alexaDeviceAddressClient.getFullAddress();
-			System.out.println("ADDRESS RECEIVED: " + addressObject.getCountryCode());
+			address = addressObject.getCity() + ", " + addressObject.getAddressLine1() + " " + addressObject.getAddressLine2(); 
+			System.out.println("ADDRESS RECEIVED: " + address);
 		} catch (DeviceAddressClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -156,7 +156,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 		if (slots.get("restaurant").getValue() != null) { 
 			//if (intent.getSlots().containsKey("restaurant")) { 
 			System.out.println("Restaurant");
-			ArrayList<Restaurant> restaurants = App.getData();
+			ArrayList<Restaurant> restaurants = App.getData(address);
 			for(Restaurant restaurant : restaurants) {
 				if(intent.getSlot("restaurant").getValue().contains(restaurant.getName().toLowerCase())) {
 					response = "In der Nähe gibt es " + restaurant.getName() + ". Die Adresse ist " + restaurant.getAddress();
@@ -167,7 +167,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 		} else if (slots.get("gericht").getValue() != null) {
 		//} else if (intent.getSlots().containsKey("gericht")) {
 			System.out.println("Gericht");
-			ArrayList<Restaurant> restaurants = App.getData();
+			ArrayList<Restaurant> restaurants = App.getData(address);
 			System.out.println("Data " + (restaurants == null));
 			System.out.println("Data " + (restaurants.isEmpty()));
 			for(Restaurant restaurant : restaurants) {
@@ -258,7 +258,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 		SsmlOutputSpeech speech = new SsmlOutputSpeech();
 		speech.setSsml("<speak>" + s + "</speak>");
 
-		return askUserResponse("Hallo! Hier ist die Essen Expertin! Worauf hast du heute hunger?");
+		return askUserResponse("Hallo! Worauf hast du heute hunger?");
 	}
 
 	/**
