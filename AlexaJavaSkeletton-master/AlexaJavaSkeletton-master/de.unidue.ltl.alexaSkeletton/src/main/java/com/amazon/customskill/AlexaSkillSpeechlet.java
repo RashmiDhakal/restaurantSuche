@@ -11,18 +11,25 @@ package com.amazon.customskill;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.amazon.customskill.exceptions.DeviceAddressClientException;
+import com.amazon.customskill.exceptions.UnauthorizedException;
 import com.amazon.speech.json.SpeechletRequestEnvelope;
 import com.amazon.speech.slu.Intent;
 import com.amazon.speech.slu.Slot;
@@ -42,6 +49,7 @@ import com.amazon.speech.ui.PlainTextOutputSpeech;
 import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SsmlOutputSpeech;
 
+import nlp.dkpro.backend.NlpSingleton;
 import nlp.dkpro.backend.PosTagger;
 
 /*
@@ -67,14 +75,20 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
     private static final String UNHANDLED_TEXT = "This is unsupported. Please ask something else.";
     private static final String ERROR_TEXT = "There was an error with the skill. Please try again.";
 	
-	
 	public static String userRequest;
 	public String address;
+	public String distance = "500";
+	
+	String nix = "Es gibt leider in der Nähe kein Restaurant, wo du das essen kannst. "
+			+ "Nach welchem Gericht oder nach welche Küche soll ich noch suchen?";
+	
+	private PosTagger posTagger;
 
 	static Logger logger = LoggerFactory.getLogger(AlexaSkillSpeechlet.class);
 
 	@Override
 	public void onSessionStarted(SpeechletRequestEnvelope<SessionStartedRequest> requestEnvelope) {
+		posTagger = NlpSingleton.getInstance();
 		logger.info("Alexa session begins");
 	}
 
@@ -95,7 +109,6 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
     private PlainTextOutputSpeech getPlainTextOutputSpeech(String speechText) {
         PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
         speech.setText(speechText);
-
         return speech;
     }
 	
@@ -105,8 +118,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
      */
     private SpeechletResponse getPermissionsResponse() {
         String speechText = "Ich bräuchte eine Erlaubnis deine Adressdaten zu benutzen um die nächsten Fressbuden zu finden. "
-        		+ "Würdest du mir diese bitte geben?"
-        		+ "Die entsprechende Anfrage schicke ich dir gleich.";
+        		+ "Würdest du mir diese bitte geben? Ich habe dir die Erlaubnisanfrage an deine Amazon Alexa App geschickt.";
 
         // Create the permission card content.
         // The differences between a permissions card and a simple card is that the
@@ -122,88 +134,145 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 
         return SpeechletResponse.newTellResponse(speech, card);
     }
+    
+    private SpeechletResponse handleBuiltInIntents(Intent intent) {
+    	String intentName = intent.getName();
+    	switch(intentName) {
+    	case "AMAZON.StopIntent":
+    		return response("Bis zum nächsten Mal!");
+    	}
+    	return null;
+    }
 
+    private void checkPermissionsResponse(SpeechletRequestEnvelope<IntentRequest> requestEnvelope) throws UnauthorizedException {
+		Session session = requestEnvelope.getSession();
+		Permissions permissions = session.getUser().getPermissions();
+        if (permissions == null) {
+        	throw new UnauthorizedException("Es besteht keine Erlaubnis die Adressdaten zu benutzen");
+        }
+    }
+    
+    private String getUserAddress(SpeechletRequestEnvelope<IntentRequest> requestEnvelope) {
+    	try {
+			SystemState systemState = getSystemState(requestEnvelope.getContext());
+	        String apiAccessToken = systemState.getApiAccessToken();
+	        String deviceId = systemState.getDevice().getDeviceId();
+	        String apiEndpoint = systemState.getApiEndpoint();
+	        AlexaDeviceAddressClient alexaDeviceAddressClient = new AlexaDeviceAddressClient(
+	                deviceId, apiAccessToken, apiEndpoint);
+        
+			Address addressObject = alexaDeviceAddressClient.getFullAddress();
+			String address = addressObject.getCity() + ", " + addressObject.getAddressLine1() + " " + addressObject.getAddressLine2(); 
+			return address;
+		} catch (DeviceAddressClientException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	return null;
+    }
+    
 	@Override
 	public SpeechletResponse onIntent(SpeechletRequestEnvelope<IntentRequest> requestEnvelope) {
 		IntentRequest request = requestEnvelope.getRequest();
 		
 		Intent intent = request.getIntent();
-		String response = "";
-		try {
-			Session session = requestEnvelope.getSession();
-			Permissions permissions = session.getUser().getPermissions();
-	        if (permissions == null) {
-	            return getPermissionsResponse();
-	        }
-		SystemState systemState = getSystemState(requestEnvelope.getContext());
-        String apiAccessToken = systemState.getApiAccessToken();
-        String deviceId = systemState.getDevice().getDeviceId();
-        String apiEndpoint = systemState.getApiEndpoint();
-        AlexaDeviceAddressClient alexaDeviceAddressClient = new AlexaDeviceAddressClient(
-                deviceId, apiAccessToken, apiEndpoint);
-
-        
-			Address addressObject = alexaDeviceAddressClient.getFullAddress();
-			address = addressObject.getCity() + ", " + addressObject.getAddressLine1() + " " + addressObject.getAddressLine2(); 
-			System.out.println("ADDRESS RECEIVED: " + address);
-		} catch (DeviceAddressClientException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		SpeechletResponse builtInResponse = this.handleBuiltInIntents(intent); 
+		if (builtInResponse != null) {
+			return builtInResponse;
 		}
+		
+		try {
+			checkPermissionsResponse(requestEnvelope);
+		} catch (UnauthorizedException e) {
+			return getPermissionsResponse();
+		}
+		this.address = getUserAddress(requestEnvelope);
 		
 		Map<String, Slot> slots = intent.getSlots();
+		ArrayList<String> queryTokensN = new ArrayList<String>();
+		ArrayList<String> queryTokensJ = new ArrayList<String>();
 		
-		if (slots.get("restaurant").getValue() != null) { 
-			//if (intent.getSlots().containsKey("restaurant")) { 
-			System.out.println("Restaurant");
-			ArrayList<Restaurant> restaurants = App.getData(address);
-			for(Restaurant restaurant : restaurants) {
-				if(intent.getSlot("restaurant").getValue().contains(restaurant.getName().toLowerCase())) {
-					response = "In der Nähe gibt es " + restaurant.getName() + ". Die Adresse ist " + restaurant.getAddress();
-					return continueConversation(response);
+		if (slots.get("alles").getValue() != null) {
+			System.out.println("Du hast gesagt: " + slots.get("alles").getValue());
+			userRequest = intent.getSlot("alles").getValue();
+			
+			queryTokensN = analyze(userRequest, "N");
+			queryTokensJ = analyze(userRequest, "ADJ");
+			
+			System.out.println("SizeN " + queryTokensN.size());
+			if(queryTokensN.size() != 0) {
+				for (int i = 0; i < queryTokensN.size(); i++) {
+					System.out.println("!Nomens!:");
+					System.out.println(queryTokensN.get(i));
 				}
 			}
 			
-		} else if (slots.get("gericht").getValue() != null) {
-		//} else if (intent.getSlots().containsKey("gericht")) {
-			System.out.println("Gericht");
-			ArrayList<Restaurant> restaurants = App.getData(address);
-			System.out.println("Data " + (restaurants == null));
-			System.out.println("Data " + (restaurants.isEmpty()));
-			for(Restaurant restaurant : restaurants) {
-				System.out.println("Title " + (restaurant.getTitle()));
-				System.out.println("Intent " + (intent.getSlot("gericht").getValue()));
-				for (String title : restaurant.getTitle()) {
-					if(intent.getSlot("gericht").getValue().contains(title.toLowerCase())) {
-						response = "In der Nähe gibt es " + restaurant.getName() + ", wo du " + title + " essen kanst.";
-						return continueConversation(response);
-					}
+			System.out.println("SizeJ " + queryTokensJ.size());
+			if(queryTokensJ.size() != 0) {
+				for (int i = 0; i < queryTokensJ.size(); i++) {
+					System.out.println("!ADJ!:");
+					System.out.println(queryTokensJ.get(i));
 				}
+			}
+			try {
+				ArrayList<Restaurant> restaurants = RestaurantFinder.getData(address, distance);
+				ArrayList<String> foundFood = findMatch(queryTokensN, restaurants, this::constructFoundFood);
+				ArrayList<String> foundKitchen = findMatch(queryTokensJ, restaurants, this::constructFoundKitchen);
 				
+				return continueConversation(foundFood.isEmpty() ? foundKitchen.isEmpty() ? nix : foundKitchen.get(0) : foundFood.get(0));
 			}
-			
-		} else if (slots.get("noidea").getValue() != null) { 	
-			return continueConversation("keine Ahnung");
-		}
-		
-		//return continueConversation("Möchtest du was bestimmtes essen oder ein bestimmtes Restaurant besuchen?");
-		return continueConversation("ok");
-		
-		
-
-		//userRequest = intent.getSlot("Alles").getValue();
-		
-	/*	logger.info("Received following text: [" + userRequest + "]");
-		if (userRequest.contains("ja")) {
-			String s = App.getData().get(1);
-			return response(s);
+			catch (Exception e) {
+				e.printStackTrace();
+			}
 		} else {
-			return response("Auf wiederhören!");
+			return continueConversation("Ich könnte leider nix hören. Kannst du bitte wiederholen?");
 		}
-		*/
-		
-		//return response("Erkannter Text: " + userRequest);
-//        return responseWithFlavour("Erkannte Nomen: " + result, new Random().nextInt(5));
+		return continueConversation(nix);	
+	}
+	
+	private ArrayList<String> findMatch(ArrayList<String> queryTokens, ArrayList<Restaurant> restaurants, BiFunction<String, String, String> constructFound) {
+		ArrayList<String> list = new ArrayList<String>();
+		String result = "";
+		HashMap<String, Restaurant> found = this.queryRestaurants(restaurants, queryTokens);
+		for(Entry<String,Restaurant> i : found.entrySet()) {
+			result = found.size() > 0 ? constructFound.apply(i.getValue().getName(), i.getKey()) : nix;
+			list.add(result);
+		}
+		return list;
+	}
+	
+	private String constructFoundFood(String restaurant, String what) {
+		StringBuilder sb = new StringBuilder();
+		sb.append("Es gibt in der nähe das Restaurant ");
+		sb.append(restaurant);
+		sb.append(", wo du ");
+		sb.append(what);
+		sb.append(" essen kannst");
+		System.out.println("Alexa antwortet: " + sb.toString());
+		return sb.toString();
+	}
+	
+	private String constructFoundKitchen(String restaurant, String what) {
+		StringBuilder sb = new StringBuilder();
+		sb.append("Es gibt in der nähe das Restaurant ");
+		sb.append(restaurant);
+		sb.append(", wo du ");
+		sb.append(what);
+		sb.append(" Küche essen kannst");
+		System.out.println("Alexa antwortet: " + sb.toString());
+		return sb.toString();
+	}
+	
+	private HashMap<String, Restaurant> queryRestaurants(ArrayList<Restaurant> restaurants, ArrayList<String> queryTokens) {
+		HashMap<String, Restaurant> result = new HashMap<String,Restaurant>();
+		for(Restaurant restaurant: restaurants) {
+			for(String token: queryTokens) {
+				if(restaurant.getTitle().contains(token) || restaurant.getAlias().contains(token) || restaurant.getTitle().contains(token.substring(0, token.length()-1))) {
+					result.put(token, restaurant);
+				}
+			}
+		}
+		return result;
 	}
 
 	/**
@@ -256,9 +325,9 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 	private SpeechletResponse getWelcomeResponse() {
 		String s = "Hallo!";
 		SsmlOutputSpeech speech = new SsmlOutputSpeech();
-		speech.setSsml("<speak>" + s + "</speak>");
+		speech.setSsml("<speak><emphasis level=\"strong\">" + s + "</emphasis> Bist du noch da?</speak>");
 
-		return askUserResponse("Hallo! Worauf hast du heute hunger?");
+		return askUserResponse("Hallo! Welches Gericht oder welche Küche möchtest du gerne essen?");
 	}
 
 	/**
@@ -271,7 +340,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 		speech.setText(text);
 		
 		PlainTextOutputSpeech speechOut = new PlainTextOutputSpeech();
-		speechOut.setText("hey");
+		speechOut.setText("Hey! Bist du noch da?");
 		
 		Reprompt speech2 = new Reprompt();
 		speech2.setOutputSpeech(speechOut);
@@ -310,5 +379,15 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 
 		return SpeechletResponse.newAskResponse(speech, rep);
 	}
-
+	
+	private ArrayList<String> analyze(String request, String tag) {
+        ArrayList<String> food = new ArrayList<>();
+        try {
+        	food = posTagger.findByTag(userRequest, tag);   
+        }
+        catch (Exception e) {
+            throw new UnsupportedOperationException();
+        }
+        return food;
+    }
 }

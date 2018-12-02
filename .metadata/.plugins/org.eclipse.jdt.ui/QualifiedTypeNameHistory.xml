@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <qualifiedTypeNameHistroy>
-<fullyQualifiedTypeName name="java.util.ArrayList"/>
 <fullyQualifiedTypeName name="com.amazon.speech.slu.Slot"/>
 <fullyQualifiedTypeName name="java.util.Map"/>
 <fullyQualifiedTypeName name="com.maxmind.geoip2.DatabaseReader"/>
@@ -14,8 +13,24 @@
 <fullyQualifiedTypeName name="com.amazon.speech.speechlet.interfaces.system.SystemInterface"/>
 <fullyQualifiedTypeName name="com.amazon.customskill.Address"/>
 <fullyQualifiedTypeName name="com.amazon.speech.ui.AskForPermissionsConsentCard"/>
-<fullyQualifiedTypeName name="java.util.HashSet"/>
-<fullyQualifiedTypeName name="java.util.Set"/>
 <fullyQualifiedTypeName name="com.amazon.speech.speechlet.Permissions"/>
+<fullyQualifiedTypeName name="nlp.dkpro.backend.NlpSingleton"/>
+<fullyQualifiedTypeName name="org.apache.uima.analysis_engine.AnalysisEngineDescription"/>
+<fullyQualifiedTypeName name="java.util.Set"/>
+<fullyQualifiedTypeName name="java.util.HashSet"/>
+<fullyQualifiedTypeName name="com.amazon.customskill.ListUtilities"/>
+<fullyQualifiedTypeName name="java.util.ArrayList"/>
+<fullyQualifiedTypeName name="com.amazon.customskill.Restaurant"/>
+<fullyQualifiedTypeName name="java.lang.StringBuilder"/>
+<fullyQualifiedTypeName name="java.util.HashMap"/>
+<fullyQualifiedTypeName name="java.util.Map.Entry"/>
+<fullyQualifiedTypeName name="java.lang.String"/>
 <fullyQualifiedTypeName name="com.amazon.speech.speechlet.Session"/>
+<fullyQualifiedTypeName name="com.amazon.speech.speechlet.SpeechletResponse"/>
+<fullyQualifiedTypeName name="com.amazon.customskill.exceptions.UnauthorizedException"/>
+<fullyQualifiedTypeName name="java.lang.System"/>
+<fullyQualifiedTypeName name="java.util.function.Function"/>
+<fullyQualifiedTypeName name="java.util.concurrent.Callable"/>
+<fullyQualifiedTypeName name="java.util.function.BiFunction"/>
+<fullyQualifiedTypeName name="com.amazon.customskill.AlexaSkillSpeechlet"/>
 </qualifiedTypeNameHistroy>

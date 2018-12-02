@@ -16,6 +16,8 @@ public class OpenStreetMapUtils {
 
     private static OpenStreetMapUtils instance = null;
     private JSONParser jsonParser;
+    private String URL = "https://nominatim.openstreetmap.org/search?q=";
+    private String request = "&format=json&polygon=1&addressdetails=1";
 
     public OpenStreetMapUtils() {
         jsonParser = new JSONParser();
@@ -60,7 +62,7 @@ public class OpenStreetMapUtils {
         query = new StringBuffer();
         res = new HashMap<String, Double>();
 
-        query.append("https://nominatim.openstreetmap.org/search?q=");
+        query.append(URL);
 
         if (split.length == 0) {
             return null;
@@ -73,7 +75,7 @@ public class OpenStreetMapUtils {
             }
         }
  
-        query.append("&format=json&polygon=1&addressdetails=1");
+        query.append(request);
 
         try {
             queryResult = getRequest(query.toString());

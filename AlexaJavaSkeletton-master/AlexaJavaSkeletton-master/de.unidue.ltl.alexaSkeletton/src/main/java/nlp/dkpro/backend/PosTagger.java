@@ -121,8 +121,7 @@ public class PosTagger
         located.forEach(x -> System.out.println(x));
     }
 
-    public List<String> findNouns(String text) throws Exception
-    {
+    public List<String> findNouns(String text) throws Exception {
         List<String> nouns = new ArrayList<>();
 
         try {
@@ -148,5 +147,29 @@ public class PosTagger
         }
         return nouns;
     }
+    
+    public ArrayList<String> findByTag(String text, String tag) throws Exception {
+        ArrayList<String> food = new ArrayList<>();
 
+        try {
+            CollectionReader reader = CollectionReaderFactory.createReader(StringReader.class,
+                    StringReader.PARAM_DOCUMENT_TEXT, text, StringReader.PARAM_DOCUMENT_ID, "1234",
+                    StringReader.PARAM_LANGUAGE, "de");
+            
+            JCasIterator iterator = new JCasIterator(reader);
+            JCas jcas = iterator.next();
+            pipeline.process(jcas);
+            
+            for(POS pos :JCasUtil.select(jcas, POS.class)){
+            	if(pos.getPosValue().startsWith(tag)) {
+                    food.add(pos.getCoveredText());
+                }
+            }
+
+        }
+        catch (Exception e) {
+            throw new UnsupportedOperationException();
+        }
+        return food;
+    }
 }
