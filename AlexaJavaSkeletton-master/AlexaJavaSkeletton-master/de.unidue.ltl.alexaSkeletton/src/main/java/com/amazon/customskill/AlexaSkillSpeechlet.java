@@ -77,7 +77,12 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 	
 	public static String userRequest;
 	public String address;
-	public String distance = "500";
+	public String distance = "1000";
+	
+	public static ArrayList<String> conversation = new ArrayList<String>();
+	public static ArrayList<String> queryTokensN = new ArrayList<String>();
+	public static ArrayList<String> queryTokensJ = new ArrayList<String>();
+	public static ArrayList<String> queryTokensNum = new ArrayList<String>();
 	
 	String nix = "Es gibt leider in der Nähe kein Restaurant, wo du das essen kannst. "
 			+ "Nach welchem Gericht oder nach welche Küche soll ich noch suchen?";
@@ -189,43 +194,66 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 		this.address = getUserAddress(requestEnvelope);
 		
 		Map<String, Slot> slots = intent.getSlots();
-		ArrayList<String> queryTokensN = new ArrayList<String>();
-		ArrayList<String> queryTokensJ = new ArrayList<String>();
+		
 		
 		if (slots.get("alles").getValue() != null) {
 			System.out.println("Du hast gesagt: " + slots.get("alles").getValue());
+			
 			userRequest = intent.getSlot("alles").getValue();
 			
-			queryTokensN = analyze(userRequest, "N");
-			queryTokensJ = analyze(userRequest, "ADJ");
+			conversation.add(userRequest);
 			
-			System.out.println("SizeN " + queryTokensN.size());
-			if(queryTokensN.size() != 0) {
-				for (int i = 0; i < queryTokensN.size(); i++) {
-					System.out.println("!Nomens!:");
-					System.out.println(queryTokensN.get(i));
-				}
-			}
-			
-			System.out.println("SizeJ " + queryTokensJ.size());
-			if(queryTokensJ.size() != 0) {
-				for (int i = 0; i < queryTokensJ.size(); i++) {
-					System.out.println("!ADJ!:");
-					System.out.println(queryTokensJ.get(i));
-				}
-			}
-			try {
-				ArrayList<Restaurant> restaurants = RestaurantFinder.getData(address, distance);
-				ArrayList<String> foundFood = findMatch(queryTokensN, restaurants, this::constructFoundFood);
-				ArrayList<String> foundKitchen = findMatch(queryTokensJ, restaurants, this::constructFoundKitchen);
+			if (conversation.size() == 1) {
+				queryTokensN = analyze(userRequest, "N");
+				queryTokensJ = analyze(userRequest, "ADJ");
 				
-				return continueConversation(foundFood.isEmpty() ? foundKitchen.isEmpty() ? nix : foundKitchen.get(0) : foundFood.get(0));
+				//Debug
+				System.out.println("Nomens:");
+				if(queryTokensN.size() != 0) {
+					for (int i = 0; i < queryTokensN.size(); i++) {
+						System.out.println(queryTokensN.get(i));
+					}
+				}
+				
+				System.out.println("ADJ:");
+				if(queryTokensJ.size() != 0) {
+					for (int i = 0; i < queryTokensJ.size(); i++) {
+						System.out.println(queryTokensJ.get(i));
+					}
+				}
+				
+				return continueConversation("Wie weit soll das Restaurant entfernt sein?");
+				
+			} else if(conversation.size() == 2) {
+				queryTokensNum = analyze(userRequest, "CARD");
+				//Debug
+				System.out.println("Num:");
+				if(queryTokensNum.size() != 0) {
+					for (int i = 0; i < queryTokensNum.size(); i++) {
+						System.out.println(queryTokensNum.get(i));
+					}
+				}
+				conversation.clear();
+				try {
+					ArrayList<Restaurant> restaurants = RestaurantFinder.getData(address, distance);
+					restaurants = ListUtilities.sortListByDistance(restaurants);
+					
+					ArrayList<String> foundFood = findMatch(queryTokensN, restaurants, this::constructFoundFood);
+					ArrayList<String> foundKitchen = findMatch(queryTokensJ, restaurants, this::constructFoundKitchen);
+					
+					if (!foundFood.isEmpty() || !foundKitchen.isEmpty()) {
+						return response(foundFood.isEmpty() ? foundKitchen.isEmpty() ? " " : foundKitchen.get(0) : foundFood.get(0));
+					} else {
+						return continueConversation(nix);
+					}	
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
-			catch (Exception e) {
-				e.printStackTrace();
-			}
+				
 		} else {
-			return continueConversation("Ich könnte leider nix hören. Kannst du bitte wiederholen?");
+			return continueConversation("Ich konnte leider nix hören. Kannst du bitte wiederholen?");
 		}
 		return continueConversation(nix);	
 	}
@@ -233,42 +261,43 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 	private ArrayList<String> findMatch(ArrayList<String> queryTokens, ArrayList<Restaurant> restaurants, BiFunction<String, String, String> constructFound) {
 		ArrayList<String> list = new ArrayList<String>();
 		String result = "";
-		HashMap<String, Restaurant> found = this.queryRestaurants(restaurants, queryTokens);
-		for(Entry<String,Restaurant> i : found.entrySet()) {
-			result = found.size() > 0 ? constructFound.apply(i.getValue().getName(), i.getKey()) : nix;
+		HashMap<Restaurant, String> found = queryRestaurants(restaurants, queryTokens);
+		for(Entry<Restaurant, String> i : found.entrySet()) {
+			result = found.size() > 0 ? constructFound.apply(i.getValue(), i.getKey().getName()) : nix;
 			list.add(result);
 		}
 		return list;
 	}
 	
-	private String constructFoundFood(String restaurant, String what) {
+	private String constructFoundFood(String what, String restaurant) {
 		StringBuilder sb = new StringBuilder();
 		sb.append("Es gibt in der nähe das Restaurant ");
 		sb.append(restaurant);
 		sb.append(", wo du ");
 		sb.append(what);
-		sb.append(" essen kannst");
+		sb.append(" essen kannst. ");
 		System.out.println("Alexa antwortet: " + sb.toString());
 		return sb.toString();
 	}
 	
-	private String constructFoundKitchen(String restaurant, String what) {
+	private String constructFoundKitchen (String what, String restaurant) {
 		StringBuilder sb = new StringBuilder();
 		sb.append("Es gibt in der nähe das Restaurant ");
 		sb.append(restaurant);
 		sb.append(", wo du ");
 		sb.append(what);
-		sb.append(" Küche essen kannst");
+		sb.append(" Küche essen kannst. ");
 		System.out.println("Alexa antwortet: " + sb.toString());
 		return sb.toString();
 	}
 	
-	private HashMap<String, Restaurant> queryRestaurants(ArrayList<Restaurant> restaurants, ArrayList<String> queryTokens) {
-		HashMap<String, Restaurant> result = new HashMap<String,Restaurant>();
+	private HashMap<Restaurant, String> queryRestaurants(ArrayList<Restaurant> restaurants, ArrayList<String> queryTokens) {
+		HashMap<Restaurant, String> result = new HashMap<Restaurant, String>();
 		for(Restaurant restaurant: restaurants) {
 			for(String token: queryTokens) {
 				if(restaurant.getTitle().contains(token) || restaurant.getAlias().contains(token) || restaurant.getTitle().contains(token.substring(0, token.length()-1))) {
-					result.put(token, restaurant);
+					result.put(restaurant, token);
+					
 				}
 			}
 		}
@@ -372,7 +401,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 
 		// reprompt after 8 seconds
 		SsmlOutputSpeech repromptSpeech = new SsmlOutputSpeech();
-		repromptSpeech.setSsml("<speak><emphasis level=\"strong\">Hey!</emphasis> Bist du noch da?</speak>");
+		repromptSpeech.setSsml("<speak><amazon:effect name=\"whispered\">" + "Hey! Bist du noch da?" + "</amazon:effect></speak>");
 
 		Reprompt rep = new Reprompt();
 		rep.setOutputSpeech(repromptSpeech);

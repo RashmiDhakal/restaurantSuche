@@ -18,8 +18,6 @@
 <fullyQualifiedTypeName name="org.apache.uima.analysis_engine.AnalysisEngineDescription"/>
 <fullyQualifiedTypeName name="java.util.Set"/>
 <fullyQualifiedTypeName name="java.util.HashSet"/>
-<fullyQualifiedTypeName name="com.amazon.customskill.ListUtilities"/>
-<fullyQualifiedTypeName name="java.util.ArrayList"/>
 <fullyQualifiedTypeName name="com.amazon.customskill.Restaurant"/>
 <fullyQualifiedTypeName name="java.lang.StringBuilder"/>
 <fullyQualifiedTypeName name="java.util.HashMap"/>
@@ -33,4 +31,7 @@
 <fullyQualifiedTypeName name="java.util.concurrent.Callable"/>
 <fullyQualifiedTypeName name="java.util.function.BiFunction"/>
 <fullyQualifiedTypeName name="com.amazon.customskill.AlexaSkillSpeechlet"/>
+<fullyQualifiedTypeName name="java.util.Comparator"/>
+<fullyQualifiedTypeName name="com.amazon.customskill.ListUtilities"/>
+<fullyQualifiedTypeName name="java.util.ArrayList"/>
 </qualifiedTypeNameHistroy>

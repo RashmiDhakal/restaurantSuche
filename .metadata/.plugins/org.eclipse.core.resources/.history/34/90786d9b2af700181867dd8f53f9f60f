@@ -1,0 +1,16 @@
+package com.amazon.customskill;
+
+import java.util.ArrayList;
+
+public class ConversationStory {
+	
+	ArrayList<String> conversation = new ArrayList<String>();
+	
+	public ConversationStory(String s) {
+		conversation.add(s);
+	}
+	
+	public ArrayList<String> getConversation() {
+		return this.conversation;
+	}
+}
