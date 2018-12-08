@@ -32,4 +32,9 @@ public class ListUtilities {
 		list.sort(Comparator.comparingDouble(Restaurant::getDistance)); 
 		return list;
 	 }
+	 
+	 public static ArrayList<Restaurant> sortListByRating(ArrayList<Restaurant> list) {	 
+			list.sort(Comparator.comparingDouble(Restaurant::getRating)); 
+			return list;
+		 }
 }

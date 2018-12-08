@@ -22,7 +22,7 @@ public class RestaurantFinder {
 	private static String key = "Efio1-A9NjP2UHSaA5aGwn3IILFcHD39ISzq201w-pxaaaQ2MBiothsuZzUoVmulDTr0W8TPDhsAkt8qS1UpBURKhKFr-6V-EKuJZvFebQXOXiAEOGbLmNhIt_vWW3Yx";
 	private static final String URL = "https://api.yelp.com/v3/businesses/search?";
 	
-    public static ArrayList<Restaurant> getData(String address, String radius) {
+    public static ArrayList<Restaurant> getData(String address, long radius) {
     	ArrayList<Restaurant> res = new ArrayList<Restaurant>();
     	HttpClient client = HttpClientBuilder.create().build();
     	HttpGet get = new HttpGet(getURL(getCoordinate(address), radius));    
@@ -67,7 +67,7 @@ public class RestaurantFinder {
 	    return "" + coords.get("lat") + "," + coords.get("lon");
 	}
 	
-	private static String getURL(String location, String radius) {
+	private static String getURL(String location, long radius) {
 		String term = "restaurant";
 		String limit = "20";
 		String locale = "de_DE";

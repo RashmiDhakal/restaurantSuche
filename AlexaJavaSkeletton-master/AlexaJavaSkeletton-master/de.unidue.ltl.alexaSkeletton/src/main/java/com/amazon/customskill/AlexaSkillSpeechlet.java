@@ -77,12 +77,13 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 	
 	public static String userRequest;
 	public String address;
-	public String distance = "1000";
+	public long distance = 1000;
 	
 	public static ArrayList<String> conversation = new ArrayList<String>();
 	public static ArrayList<String> queryTokensN = new ArrayList<String>();
 	public static ArrayList<String> queryTokensJ = new ArrayList<String>();
-	public static ArrayList<String> queryTokensNum = new ArrayList<String>();
+	
+	ArrayList<Restaurant> foundRestaurants;
 	
 	String nix = "Es gibt leider in der Nähe kein Restaurant, wo du das essen kannst. "
 			+ "Nach welchem Gericht oder nach welche Küche soll ich noch suchen?";
@@ -144,6 +145,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
     	String intentName = intent.getName();
     	switch(intentName) {
     	case "AMAZON.StopIntent":
+    		conversation.clear();
     		return response("Bis zum nächsten Mal!");
     	}
     	return null;
@@ -179,7 +181,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 	@Override
 	public SpeechletResponse onIntent(SpeechletRequestEnvelope<IntentRequest> requestEnvelope) {
 		IntentRequest request = requestEnvelope.getRequest();
-		
+				
 		Intent intent = request.getIntent();
 		SpeechletResponse builtInResponse = this.handleBuiltInIntents(intent); 
 		if (builtInResponse != null) {
@@ -197,15 +199,21 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 		
 		
 		if (slots.get("alles").getValue() != null) {
+			//Debug
 			System.out.println("Du hast gesagt: " + slots.get("alles").getValue());
 			
 			userRequest = intent.getSlot("alles").getValue();
-			
 			conversation.add(userRequest);
 			
 			if (conversation.size() == 1) {
 				queryTokensN = analyze(userRequest, "N");
 				queryTokensJ = analyze(userRequest, "ADJ");
+				
+				if((queryTokensN.isEmpty() && queryTokensJ.isEmpty()) || queryTokensN.contains("ahnung") || queryTokensN.contains("keine") || queryTokensN.contains("irgendwas") || queryTokensN.contains("nicht")) {
+					conversation.clear();
+					return continueConversation("Du hast kein mir bekanntes Gericht oder keine Küche die ich kenne gennant."
+							+ " Überlege dir bitte nochmal, welches Gericht oder welche Küche möchtest du gerne essen?");
+				}
 				
 				//Debug
 				System.out.println("Nomens:");
@@ -224,25 +232,54 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 				
 				return continueConversation("Wie weit soll das Restaurant entfernt sein?");
 				
-			} else if(conversation.size() == 2) {
-				queryTokensNum = analyze(userRequest, "CARD");
-				//Debug
-				System.out.println("Num:");
-				if(queryTokensNum.size() != 0) {
-					for (int i = 0; i < queryTokensNum.size(); i++) {
-						System.out.println(queryTokensNum.get(i));
+			} else if(conversation.size() == 2) {		
+				NumberWordsToNumbers wandler = new NumberWordsToNumbers();
+				try {
+					String s = StringFilter.FilterForDistance(userRequest);
+					distance = wandler.Umwandeln(s);
+					//Debug
+					System.out.println("dist = " + distance);
+					
+					if (distance == 0) {
+						conversation.remove(1);
+						return(continueConversation("Wieso soll es so kompliziert sein? Nenn bitte eine gültige Distanz!"));
 					}
+					
+				} catch (Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+					conversation.remove(1);
+					return(continueConversation("Wieso soll es so kompliziert sein? Nenn bitte eine gültige Distanz!"));
 				}
+				
+				return(continueConversation("Ist die Bewerturn des Restaurants für dich wichtig?"));
+
+			} else if(conversation.size() == 3) {
 				conversation.clear();
 				try {
 					ArrayList<Restaurant> restaurants = RestaurantFinder.getData(address, distance);
+					
 					restaurants = ListUtilities.sortListByDistance(restaurants);
 					
+					if (userRequest.contains("ja")) {
+						restaurants = ListUtilities.sortListByRating(restaurants);
+					}
+					
 					ArrayList<String> foundFood = findMatch(queryTokensN, restaurants, this::constructFoundFood);
-					ArrayList<String> foundKitchen = findMatch(queryTokensJ, restaurants, this::constructFoundKitchen);
+					ArrayList<String> foundKitchen = new ArrayList<String>();
+					if(foundFood.isEmpty()) {
+						foundKitchen = findMatch(queryTokensJ, restaurants, this::constructFoundKitchen);
+					}
+					
+					String answer = ""; 
 					
 					if (!foundFood.isEmpty() || !foundKitchen.isEmpty()) {
-						return response(foundFood.isEmpty() ? foundKitchen.isEmpty() ? " " : foundKitchen.get(0) : foundFood.get(0));
+						answer = foundFood.isEmpty() ? foundKitchen.isEmpty() ? " " : foundKitchen.get(0) : foundFood.get(0);
+						if (userRequest.contains("ja")) {
+							answer += "Dieses Restaurant ist mit " + foundRestaurants.get(0).getRating() + " bewertet.";
+							System.out.println("Answer: " + answer);
+						}
+						return response(answer);
 					} else {
 						return continueConversation(nix);
 					}	
@@ -251,7 +288,6 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 					e.printStackTrace();
 				}
 			}
-				
 		} else {
 			return continueConversation("Ich konnte leider nix hören. Kannst du bitte wiederholen?");
 		}
@@ -265,6 +301,10 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 		for(Entry<Restaurant, String> i : found.entrySet()) {
 			result = found.size() > 0 ? constructFound.apply(i.getValue(), i.getKey().getName()) : nix;
 			list.add(result);
+		}
+		foundRestaurants = new ArrayList<Restaurant>();
+		for (Object r : found.keySet().toArray()) {
+			foundRestaurants.add((Restaurant) r);
 		}
 		return list;
 	}
@@ -356,7 +396,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 		SsmlOutputSpeech speech = new SsmlOutputSpeech();
 		speech.setSsml("<speak><emphasis level=\"strong\">" + s + "</emphasis> Bist du noch da?</speak>");
 
-		return askUserResponse("Hallo! Welches Gericht oder welche Küche möchtest du gerne essen?");
+		return askUserResponse(s + "Welches Gericht oder welche Küche möchtest du gerne essen?");
 	}
 
 	/**
@@ -369,6 +409,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 		speech.setText(text);
 		
 		PlainTextOutputSpeech speechOut = new PlainTextOutputSpeech();
+		
 		speechOut.setText("Hey! Bist du noch da?");
 		
 		Reprompt speech2 = new Reprompt();
