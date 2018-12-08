@@ -188,15 +188,18 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 			return builtInResponse;
 		}
 		
+		//um ohne Alexa Gerät testen zu können - das AUSKOMMENTIEREN
 		try {
 			checkPermissionsResponse(requestEnvelope);
 		} catch (UnauthorizedException e) {
 			return getPermissionsResponse();
 		}
 		this.address = getUserAddress(requestEnvelope);
+		//bis hier
+		//und eine Adresse unten hardkodieren
+		//address = hier eine Adresse schreiben (z.b. "Duisburg, Hauptstrasse 1");
 		
 		Map<String, Slot> slots = intent.getSlots();
-		
 		
 		if (slots.get("alles").getValue() != null) {
 			//Debug
@@ -243,6 +246,12 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 					if (distance == 0) {
 						conversation.remove(1);
 						return(continueConversation("Wieso soll es so kompliziert sein? Nenn bitte eine gültige Distanz!"));
+					}
+					
+					if (distance > 5000) {
+						conversation.remove(1);
+						return(continueConversation("Das ist viel zu weit. Ich kann die Restaurants nur in deiner Nähe suchen!"
+								+ "Nenn bitte eine kleinere Distanz!"));
 					}
 					
 				} catch (Exception e1) {
