@@ -34,7 +34,7 @@ public class ListUtilities {
 	 }
 	 
 	 public static ArrayList<Restaurant> sortListByRating(ArrayList<Restaurant> list) {	 
-			list.sort(Comparator.comparingDouble(Restaurant::getRating)); 
+			list.sort(Comparator.comparingDouble(Restaurant::getRating).reversed()); 
 			return list;
 		 }
 }

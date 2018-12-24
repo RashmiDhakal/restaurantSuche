@@ -2,12 +2,19 @@
 <section name="Workbench">
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
 		<item value="false" key="isRegEx"/>
-		<item value="address" key="selection"/>
+		<item value="noMatches" key="selection"/>
 		<item value="false" key="casesensitive"/>
 		<item value="false" key="incremental"/>
 		<item value="true" key="wrap"/>
 		<item value="false" key="wholeword"/>
 		<list key="findhistory">
+			<item value="noMatches"/>
+			<item value="nix"/>
+			<item value="foundRestaurants"/>
+			<item value="list"/>
+			<item value="listSize"/>
+			<item value="rating"/>
+			<item value="wieso"/>
 			<item value="address"/>
 			<item value="found.clear();"/>
 			<item value="bis zum"/>
@@ -16,9 +23,6 @@
 			<item value="start"/>
 			<item value="stringToJSON"/>
 			<item value="myskill"/>
-			<item value="restaurant"/>
-			<item value="&lt;listener&gt;"/>
-			<item value="nlp.dkpro.backend.BackendStarter"/>
 		</list>
 		<list key="replacehistory">
 		</list>

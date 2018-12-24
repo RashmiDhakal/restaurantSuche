@@ -9,6 +9,8 @@
  */
 package com.amazon.customskill;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -22,6 +24,8 @@ import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.IntStream;
+
+import javax.xml.stream.XMLStreamException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
@@ -49,6 +53,7 @@ import com.amazon.speech.ui.PlainTextOutputSpeech;
 import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SsmlOutputSpeech;
 
+import nlp.dkpro.backend.MyJWKTL;
 import nlp.dkpro.backend.NlpSingleton;
 import nlp.dkpro.backend.PosTagger;
 
@@ -56,8 +61,6 @@ import nlp.dkpro.backend.PosTagger;
  * This class is the actual skill. Here you receive the input and have to produce the speech output. 
  */
 public class AlexaSkillSpeechlet implements SpeechletV2 {
-	
-	private static final String ADDRESS_CARD_TITLE = "Ich darf deine Adresse nicht lesen";
 
     /**
      * The permissions that this skill relies on for retrieving addresses. If the consent token isn't
@@ -68,25 +71,24 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
      * read::alexa:device:all:address:country_and_postal_code
      * Be sure to check your permissions settings for your skill on https://developer.amazon.com/
      */
-    private static final String ALL_ADDRESS_PERMISSION = "read::alexa:device:all:address";
-
-    private static final String WELCOME_TEXT = "Welcome to the Sample Device Address API Skill! What do you want to ask?";
-    private static final String HELP_TEXT = "You can use this skill by asking something like: whats my address";
-    private static final String UNHANDLED_TEXT = "This is unsupported. Please ask something else.";
-    private static final String ERROR_TEXT = "There was an error with the skill. Please try again.";
 	
+	private static final String ADDRESS_CARD_TITLE = "Ich darf deine Adresse nicht lesen";
+    private static final String ALL_ADDRESS_PERMISSION = "read::alexa:device:all:address";
 	public static String userRequest;
 	public String address;
+	String userSaid;
+	
 	public long distance = 1000;
+	int listSize = 0;
+	int index = 0;
+	
+	boolean rating = false;
 	
 	public static ArrayList<String> conversation = new ArrayList<String>();
 	public static ArrayList<String> queryTokensN = new ArrayList<String>();
 	public static ArrayList<String> queryTokensJ = new ArrayList<String>();
-	
 	ArrayList<Restaurant> foundRestaurants;
-	
-	String nix = "Es gibt leider in der Nähe kein Restaurant, wo du das essen kannst. "
-			+ "Nach welchem Gericht oder nach welche Küche soll ich noch suchen?";
+	ArrayList<String> list = new ArrayList<String>();
 	
 	private PosTagger posTagger;
 
@@ -145,7 +147,8 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
     	String intentName = intent.getName();
     	switch(intentName) {
     	case "AMAZON.StopIntent":
-    		conversation.clear();
+    		//conversation.clear();
+    		clean();
     		return response("Bis zum nächsten Mal!");
     	}
     	return null;
@@ -165,9 +168,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 	        String apiAccessToken = systemState.getApiAccessToken();
 	        String deviceId = systemState.getDevice().getDeviceId();
 	        String apiEndpoint = systemState.getApiEndpoint();
-	        AlexaDeviceAddressClient alexaDeviceAddressClient = new AlexaDeviceAddressClient(
-	                deviceId, apiAccessToken, apiEndpoint);
-        
+	        AlexaDeviceAddressClient alexaDeviceAddressClient = new AlexaDeviceAddressClient(deviceId, apiAccessToken, apiEndpoint);
 			Address addressObject = alexaDeviceAddressClient.getFullAddress();
 			String address = addressObject.getCity() + ", " + addressObject.getAddressLine1() + " " + addressObject.getAddressLine2(); 
 			return address;
@@ -180,8 +181,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
     
 	@Override
 	public SpeechletResponse onIntent(SpeechletRequestEnvelope<IntentRequest> requestEnvelope) {
-		IntentRequest request = requestEnvelope.getRequest();
-				
+		IntentRequest request = requestEnvelope.getRequest();	
 		Intent intent = request.getIntent();
 		SpeechletResponse builtInResponse = this.handleBuiltInIntents(intent); 
 		if (builtInResponse != null) {
@@ -212,10 +212,29 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 				queryTokensN = analyze(userRequest, "N");
 				queryTokensJ = analyze(userRequest, "ADJ");
 				
+				if (userRequest.contains("pizza")) {
+					queryTokensN.add("pizza");
+				}
+			
+				/*
+				try {
+					queryTokensN = addSynonyms(queryTokensN);
+					queryTokensJ = addSynonyms(queryTokensJ);
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (XMLStreamException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				*/
+				
 				if((queryTokensN.isEmpty() && queryTokensJ.isEmpty()) || queryTokensN.contains("ahnung") || queryTokensN.contains("keine") || queryTokensN.contains("irgendwas") || queryTokensN.contains("nicht")) {
 					conversation.clear();
-					return continueConversation("Du hast kein mir bekanntes Gericht oder keine Küche die ich kenne gennant."
-							+ " Überlege dir bitte nochmal, welches Gericht oder welche Küche möchtest du gerne essen?");
+					return continueConversation(Constants.noMatches);
 				}
 				
 				//Debug
@@ -233,7 +252,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 					}
 				}
 				
-				return continueConversation("Wie weit soll das Restaurant entfernt sein?");
+				return continueConversation(Constants.distance);
 				
 			} else if(conversation.size() == 2) {		
 				NumberWordsToNumbers wandler = new NumberWordsToNumbers();
@@ -245,35 +264,27 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 					
 					if (distance == 0) {
 						conversation.remove(1);
-						return(continueConversation("Wieso soll es so kompliziert sein? Nenn bitte eine gültige Distanz!"));
+						return(continueConversation(Constants.invalidDistance));
 					}
 					
 					if (distance > 5000) {
 						conversation.remove(1);
-						return(continueConversation("Das ist viel zu weit. Ich kann die Restaurants nur in deiner Nähe suchen!"
-								+ "Nenn bitte eine kleinere Distanz!"));
+						return(continueConversation(Constants.bigDistance));
 					}
 					
 				} catch (Exception e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 					conversation.remove(1);
-					return(continueConversation("Wieso soll es so kompliziert sein? Nenn bitte eine gültige Distanz!"));
+					return(continueConversation(Constants.invalidDistance));
 				}
 				
-				return(continueConversation("Ist die Bewerturn des Restaurants für dich wichtig?"));
+				return(continueConversation(Constants.rating));
 
 			} else if(conversation.size() == 3) {
-				conversation.clear();
+				
 				try {
-					ArrayList<Restaurant> restaurants = RestaurantFinder.getData(address, distance);
-					
-					restaurants = ListUtilities.sortListByDistance(restaurants);
-					
-					if (userRequest.contains("ja")) {
-						restaurants = ListUtilities.sortListByRating(restaurants);
-					}
-					
+					ArrayList<Restaurant> restaurants = RestaurantFinder.getData(address, distance);					
 					ArrayList<String> foundFood = findMatch(queryTokensN, restaurants, this::constructFoundFood);
 					ArrayList<String> foundKitchen = new ArrayList<String>();
 					if(foundFood.isEmpty()) {
@@ -281,46 +292,116 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 					}
 					
 					String answer = ""; 
-					
 					if (!foundFood.isEmpty() || !foundKitchen.isEmpty()) {
-						answer = foundFood.isEmpty() ? foundKitchen.isEmpty() ? " " : foundKitchen.get(0) : foundFood.get(0);
+						if (listSize == 1) {
+							answer = "Ich habe für dich ein Restaurant in der nähe gefunden. Das ist ";
+							conversation.clear();
+							
+						} else {
+							answer = "Ich habe für dich " + listSize + " Restaurants in der nähe gefunden. Das erste Restaurant ist ";
+							index++;
+						}
+						answer += foundFood.isEmpty() ? foundKitchen.isEmpty() ? " " : foundKitchen.get(0) : foundFood.get(0);
 						if (userRequest.contains("ja")) {
-							answer += "Dieses Restaurant ist mit " + foundRestaurants.get(0).getRating() + " bewertet.";
+							rating = true;
+							foundRestaurants = ListUtilities.sortListByRating(foundRestaurants);
+							answer += "Dieses Restaurant ist mit " + foundRestaurants.get(0).getRating() + " bewertet. ";
 							System.out.println("Answer: " + answer);
 						}
+						if (listSize > 1) {
+							answer += "Soll ich das nächste Restaurant nennen?";
+							return continueConversation(answer);
+						} else {
+							answer += getFakt();
+						}
+						clean();
 						return response(answer);
 					} else {
-						return continueConversation(nix);
+						conversation.clear();
+						return continueConversation(Constants.nix);
 					}	
 				}
 				catch (Exception e) {
 					e.printStackTrace();
 				}
+			} else if (conversation.size() >= 4) {
+				if (userRequest.contains("ja")) {
+					String answer = "Das nächste Restaurant ist ";
+					answer += list.get(index);
+					if (rating == true) {
+						answer += "Dieses Restaurant ist mit " + foundRestaurants.get(index).getRating() + " bewertet. ";
+					}
+					index++;
+					if (index == listSize) {
+						answer += " Das war das letzte Restaurant, das ich gefunden habe. ";
+						answer += getFakt();
+						clean();
+						return response(answer);
+					} else {
+						int rest = listSize - index;
+						String r = "";
+						System.out.println("Rest: " + rest);
+						if (rest == 1) {
+							r = "ein Restaurant ";
+						} else {
+							r = "" + rest + " Restaurants ";
+						}
+						answer += "Ich habe noch " + r + "für dich. Soll ich das nächste Restaurant nennen?"; 
+						return continueConversation(answer);
+					}
+				} else {
+					clean();
+					return response("Okay. " + getFakt());
+				}
 			}
 		} else {
-			return continueConversation("Ich konnte leider nix hören. Kannst du bitte wiederholen?");
+			return continueConversation(Constants.nothing);
 		}
-		return continueConversation(nix);	
+		return continueConversation(Constants.nix);	
+	}
+	
+	private String getFakt() {
+		ArrayList<String> fakts = FactProvider.getFactProvider().getFact(userSaid);
+		Random r = new Random();
+		String a = "";
+		if (fakts.size() == 0) {
+			fakts = FactProvider.getFactProvider().getFact("default");
+			String fakt = fakts.get(r.nextInt(((fakts.size()-1) - 0) + 1) + 0);
+			a = "Hier ist noch ein interessanter Fakt. " + fakt;
+		} else {
+			String fakt = fakts.get(r.nextInt(((fakts.size()-1) - 0) + 1) + 0);
+			a = "Hier ist noch ein interessanter Fakt über das ausgewählte Essen. " + fakt;
+		}	
+		return a;
+	}
+	
+	private void clean() {
+		index = 0;
+		listSize = 0;
+		list.clear();
+		conversation.clear();
+		rating = false;
+		foundRestaurants.clear();
 	}
 	
 	private ArrayList<String> findMatch(ArrayList<String> queryTokens, ArrayList<Restaurant> restaurants, BiFunction<String, String, String> constructFound) {
-		ArrayList<String> list = new ArrayList<String>();
 		String result = "";
 		HashMap<Restaurant, String> found = queryRestaurants(restaurants, queryTokens);
-		for(Entry<Restaurant, String> i : found.entrySet()) {
-			result = found.size() > 0 ? constructFound.apply(i.getValue(), i.getKey().getName()) : nix;
+		foundRestaurants = new ArrayList<>(found.keySet());
+		foundRestaurants = ListUtilities.sortListByDistance(foundRestaurants);
+		for(Restaurant i : foundRestaurants) {
+			result = found.size() > 0 ? constructFound.apply(found.get(i), i.getName()) : Constants.nix;
 			list.add(result);
 		}
-		foundRestaurants = new ArrayList<Restaurant>();
-		for (Object r : found.keySet().toArray()) {
-			foundRestaurants.add((Restaurant) r);
-		}
+		listSize = list.size();
+		System.out.println("FoundRestaurants: " + foundRestaurants.size());
 		return list;
 	}
 	
 	private String constructFoundFood(String what, String restaurant) {
+		userSaid = what;
 		StringBuilder sb = new StringBuilder();
-		sb.append("Es gibt in der nähe das Restaurant ");
+		sb.append("das Restaurant ");
 		sb.append(restaurant);
 		sb.append(", wo du ");
 		sb.append(what);
@@ -330,8 +411,9 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 	}
 	
 	private String constructFoundKitchen (String what, String restaurant) {
+		userSaid = what;
 		StringBuilder sb = new StringBuilder();
-		sb.append("Es gibt in der nähe das Restaurant ");
+		sb.append("das Restaurant ");
 		sb.append(restaurant);
 		sb.append(", wo du ");
 		sb.append(what);
@@ -346,7 +428,6 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 			for(String token: queryTokens) {
 				if(restaurant.getTitle().contains(token) || restaurant.getAlias().contains(token) || restaurant.getTitle().contains(token.substring(0, token.length()-1))) {
 					result.put(restaurant, token);
-					
 				}
 			}
 		}
@@ -469,4 +550,23 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
         }
         return food;
     }
+	
+	private ArrayList<String> addSynonyms(ArrayList<String> list) throws FileNotFoundException, XMLStreamException, IOException {
+		ArrayList<String> result = new ArrayList<String>();
+		result.addAll(list);
+		
+		for (String word : list) {
+			//debug
+			System.out.println("Word: " + word);
+			ArrayList<String> syn = MyJWKTL.getSynonym(word);
+			//debug
+			System.out.println("Syn.size " + syn.size());
+			for (int i = 0; i < syn.size(); i++) {
+				System.out.println(syn.get(i));
+			}
+			result.addAll(syn);
+		}
+		
+		return result;
+	}
 }

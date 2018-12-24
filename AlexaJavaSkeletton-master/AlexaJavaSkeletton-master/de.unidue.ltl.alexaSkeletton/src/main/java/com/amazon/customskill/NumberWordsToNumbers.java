@@ -7,6 +7,9 @@ import java.util.Map.Entry;
 
 public class NumberWordsToNumbers {
     private HashMap<String, Integer> numbers;
+    private HashMap<String, Integer> numbersOver10;
+    private HashMap<String, Integer> numbersOver20;
+    private HashMap<String, Integer> numbersOver100;
     
     private Integer multiplier;
     
@@ -15,26 +18,30 @@ public class NumberWordsToNumbers {
     public NumberWordsToNumbers() {
         this.multiplier = 1;
         this.numbers = new HashMap<String, Integer>();
+        this.numbersOver10 = new HashMap<String, Integer>();
+        this.numbersOver20 = new HashMap<String, Integer>();
+        this.numbersOver100 = new HashMap<String, Integer>();
+        
         // 10 - 19: longer words first, otherwise e.g. "dreißig" will be recognized as "drei"
-        this.numbers.put("zehn", 10);
-        this.numbers.put("elf", 11);
-        this.numbers.put("zwölf", 12);
-        this.numbers.put("dreizehn", 13);
-        this.numbers.put("vierzehn", 14);
-        this.numbers.put("fünfzehn", 15);
-        this.numbers.put("sechzehn", 16);
-        this.numbers.put("siebzehn", 17);
-        this.numbers.put("achtzehn", 18);
-        this.numbers.put("neunzehn", 19);
+        this.numbersOver10.put("zehn", 10);
+        this.numbersOver10.put("elf", 11);
+        this.numbersOver10.put("zwölf", 12);
+        this.numbersOver10.put("dreizehn", 13);
+        this.numbersOver10.put("vierzehn", 14);
+        this.numbersOver10.put("fünfzehn", 15);
+        this.numbersOver10.put("sechzehn", 16);
+        this.numbersOver10.put("siebzehn", 17);
+        this.numbersOver10.put("achtzehn", 18);
+        this.numbersOver10.put("neunzehn", 19);
         //20-90
-        this.numbers.put("zwanzig", 20);
-        this.numbers.put("dreißig", 30);
-        this.numbers.put("vierzig", 40);
-        this.numbers.put("fünfzig", 50);
-        this.numbers.put("sechzig", 60);
-        this.numbers.put("siebzig", 70);
-        this.numbers.put("achtzig", 80);
-        this.numbers.put("neunzig", 90);
+        this.numbersOver20.put("zwanzig", 20);
+        this.numbersOver20.put("dreißig", 30);
+        this.numbersOver20.put("vierzig", 40);
+        this.numbersOver20.put("fünfzig", 50);
+        this.numbersOver20.put("sechzig", 60);
+        this.numbersOver20.put("siebzig", 70);
+        this.numbersOver20.put("achtzig", 80);
+        this.numbersOver20.put("neunzig", 90);
         // 10^0
         this.numbers.put("null", 0);
         this.numbers.put("ein", 1);
@@ -50,10 +57,10 @@ public class NumberWordsToNumbers {
         this.numbers.put("neun", 9);
         
         // >=10^2
-        this.numbers.put("hundert", 100);
-        this.numbers.put("tausend", 1000);
-        this.numbers.put("million", 1000000);
-        this.numbers.put("milliard", 1000000000);
+        this.numbersOver100.put("hundert", 100);
+        this.numbersOver100.put("tausend", 1000);
+        this.numbersOver100.put("million", 1000000);
+        this.numbersOver100.put("milliard", 1000000000);
     }
     
     public Integer Umwandeln(String str) throws Exception {
@@ -62,21 +69,31 @@ public class NumberWordsToNumbers {
         prepareString();
         List<Integer> nachkommastellen = this.nachkommastellen();
         List<Integer> splited = this.split(this.currentState);
+        ArrayList<Integer> resArr = new ArrayList<Integer>();
         for(int i = 0; i < splited.size(); i++) {
-            if(splited.get(i) < 10) {
-                if(i < splited.size() - 1 && splited.get(i+1) > 99) {
-                    result += splited.get(i) * splited.get(i+1);
-                    i++;
+            if(splited.get(i) > 99 || splited.get(i) < 10) {
+                if(i > 0 &&  splited.get(i-1) < splited.get(i)) {
+                    result *= splited.get(i); 
                 } else {
-                    result += splited.get(i);
+                    resArr.add(result);
+                    result = splited.get(i);
                 }
             } else {
                 result += splited.get(i);
             }
         }
+        result += sum(resArr);
         result *= this.multiplier;
         for(int i = 0; i < nachkommastellen.size(); i++) {
             result += nachkommastellen.get(i) * this.multiplier / (int)Math.pow(10, i + 1);
+        }
+        return result;
+    }
+    
+    private Integer sum(ArrayList<Integer> list) {
+        Integer result = 0;
+        for(Integer elem: list) {
+            result += elem;
         }
         return result;
     }
@@ -86,25 +103,34 @@ public class NumberWordsToNumbers {
         ArrayList<Integer> result = new ArrayList<Integer>();
         int length = cpy.length();
         while(cpy.length()>0) {
-            for(String unit : this.numbers.keySet()) {
-                if(this.numbers.containsKey(cpy)) {
-                    result.add(this.numbers.get(cpy));
-                    cpy = cpy.substring(cpy.length());
-                } else {
-                    if(cpy.startsWith("und")) {
-                        cpy = cpy.substring("und".length());
-                    } 
-                    if(cpy.startsWith(unit)) {
-                        result.add(this.numbers.get(unit));
-                        cpy = cpy.substring(unit.length());
-                    }
-                }
-            }
+            cpy = splitByUnit(this.numbersOver100, cpy, result);
+            cpy = splitByUnit(this.numbersOver20, cpy, result);
+            cpy = splitByUnit(this.numbersOver10, cpy, result);
+            cpy = splitByUnit(this.numbers, cpy, result);
             if(cpy.length()== length){
                 throw new Exception("Keine gültige Zahl");
             }
         }
         return result;
+    }
+    
+    private String splitByUnit(HashMap<String, Integer> units, String str, ArrayList<Integer> result) {
+        String cpy = str;
+        for(String unit : units.keySet()) {
+            if(units.containsKey(cpy)) {
+                result.add(units.get(cpy));
+                return cpy.substring(cpy.length());
+            } else {
+                if(cpy.startsWith("und")) {
+                    cpy = cpy.substring("und".length());
+                } 
+                if(cpy.startsWith(unit)) {
+                    result.add(units.get(unit));
+                    return cpy.substring(unit.length());
+                }
+            }
+        }
+        return cpy;
     }
     
     private void prepareString() throws Exception {

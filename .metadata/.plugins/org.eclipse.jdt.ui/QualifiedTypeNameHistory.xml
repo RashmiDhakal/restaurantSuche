@@ -4,7 +4,6 @@
 <fullyQualifiedTypeName name="java.util.Map"/>
 <fullyQualifiedTypeName name="com.maxmind.geoip2.DatabaseReader"/>
 <fullyQualifiedTypeName name="java.io.IOException"/>
-<fullyQualifiedTypeName name="java.io.File"/>
 <fullyQualifiedTypeName name="com.maxmind.geoip2.exception.GeoIp2Exception"/>
 <fullyQualifiedTypeName name="java.net.InetAddress"/>
 <fullyQualifiedTypeName name="com.maxmind.geoip2.model.CityResponse"/>
@@ -33,9 +32,22 @@
 <fullyQualifiedTypeName name="java.util.Comparator"/>
 <fullyQualifiedTypeName name="it.unimi.dsi.fastutil.Arrays"/>
 <fullyQualifiedTypeName name="java.util.Arrays"/>
-<fullyQualifiedTypeName name="java.util.List"/>
-<fullyQualifiedTypeName name="java.util.ArrayList"/>
 <fullyQualifiedTypeName name="com.amazon.customskill.NumberWordsToNumbers"/>
-<fullyQualifiedTypeName name="com.amazon.customskill.ListUtilities"/>
 <fullyQualifiedTypeName name="com.amazon.customskill.Restaurant"/>
+<fullyQualifiedTypeName name="java.lang.ClassNotFoundException"/>
+<fullyQualifiedTypeName name="org.springframework.core.io.ResourceLoader"/>
+<fullyQualifiedTypeName name="com.amazon.customskill.ListUtilities"/>
+<fullyQualifiedTypeName name="com.amazon.customskill.Constants"/>
+<fullyQualifiedTypeName name="java.util.List"/>
+<fullyQualifiedTypeName name="nlp.dkpro.backend.MyGermaNet"/>
+<fullyQualifiedTypeName name="java.util.ArrayList"/>
+<fullyQualifiedTypeName name="java.io.File"/>
+<fullyQualifiedTypeName name="de.tudarmstadt.ukp.jwktl.api.IWiktionaryEdition"/>
+<fullyQualifiedTypeName name="de.tudarmstadt.ukp.jwktl.JWKTL"/>
+<fullyQualifiedTypeName name="de.tudarmstadt.ukp.jwktl.api.IWiktionaryPage"/>
+<fullyQualifiedTypeName name="de.tudarmstadt.ukp.jwktl.api.IWiktionaryEntry"/>
+<fullyQualifiedTypeName name="de.tudarmstadt.ukp.jwktl.api.PartOfSpeech"/>
+<fullyQualifiedTypeName name="de.tudarmstadt.ukp.jwktl.api.IWiktionaryRelation"/>
+<fullyQualifiedTypeName name="de.tudarmstadt.ukp.jwktl.api.RelationType"/>
+<fullyQualifiedTypeName name="org.springframework.util.ResourceUtils"/>
 </qualifiedTypeNameHistroy>

@@ -1,8 +1,0 @@
-package com.amazon.customskill;
-
-public class NumberWordsToNumbers {
-
-	public static int wordToNumber(String word) {
-		
-	}
-}

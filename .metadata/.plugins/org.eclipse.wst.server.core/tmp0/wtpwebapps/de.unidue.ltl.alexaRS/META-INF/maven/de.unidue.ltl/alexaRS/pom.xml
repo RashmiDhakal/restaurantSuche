@@ -89,7 +89,20 @@
 				de.tudarmstadt.ukp.dkpro.core.stanfordnlp-gpl
 			</artifactId>
 			<version>1.9.2</version>
+		</dependency>
+		<!-- MS Access connection -->
+		<dependency>
+		    <groupId>net.sf.ucanaccess</groupId>
+		    <artifactId>ucanaccess</artifactId>
+		    <version>4.0.4</version>
 		</dependency>	
+		
+		<!-- jwktl -->
+		<dependency>
+		  <groupId>org.dkpro.jwktl</groupId>
+          	<artifactId>dkpro-jwktl</artifactId>
+		  <version>1.1.0</version>
+		</dependency>
 	</dependencies>
 
 	<properties>
