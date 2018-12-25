@@ -298,7 +298,7 @@ public class AlexaSkillSpeechlet implements SpeechletV2 {
 							conversation.clear();
 							
 						} else {
-							answer = "Ich habe für dich " + listSize + " Restaurants in der nähe gefunden. Das erste Restaurant ist ";
+							answer = "Ich habe für dich " + listSize + " Restaurants in der Nähe gefunden. Das erste Restaurant ist ";
 							index++;
 						}
 						answer += foundFood.isEmpty() ? foundKitchen.isEmpty() ? " " : foundKitchen.get(0) : foundFood.get(0);

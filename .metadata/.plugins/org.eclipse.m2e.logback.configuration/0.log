@@ -5161,3 +5161,5 @@ org.eclipse.core.runtime.CoreException: Launch configuration App references clos
 2018-12-24 19:28:53,513 [Worker-65: Launching Tomcat v9.0 Server at localhost] INFO  o.e.m.w.i.f.ResourceFilteringBuildParticipant - Changed resources require a complete clean of filtered resources of de.unidue.ltl.alexaRS
 2018-12-24 19:28:53,520 [Worker-65: Launching Tomcat v9.0 Server at localhost] INFO  o.e.m.w.i.f.ResourceFilteringBuildParticipant - Executing resource filtering for de.unidue.ltl.alexaRS
 2018-12-24 19:28:53,523 [Worker-65: Launching Tomcat v9.0 Server at localhost] WARN  o.e.m.c.i.embedder.EclipseLogger - Using platform encoding (Cp1252 actually) to copy filtered resources, i.e. build is platform dependent!
+2018-12-25 11:45:57,731 [Worker-7: Loading available Gradle versions] INFO  c.g.t.t.d.PublishedGradleVersions - Gradle version information cache is up-to-date. Trying to read.
+2018-12-25 15:04:58,859 [Worker-0: Loading available Gradle versions] INFO  c.g.t.t.d.PublishedGradleVersions - Gradle version information cache is out-of-date. Trying to update.
